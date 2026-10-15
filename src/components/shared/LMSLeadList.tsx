@@ -15,6 +15,13 @@ import { AddNoteModal } from './AddNoteModal';
 import { WhatsAppDrawer } from './WhatsAppDrawer';
 import { RecordingPlayerModal } from './RecordingPlayerModal';
 import { UploadLeadsModal } from './UploadLeadsModal';
+import {
+  FiltersModal,
+  EMPTY_FILTERS,
+  applyLeadFilters,
+  countFilters } from
+'./FiltersModal';
+import type { LeadFilters } from './FiltersModal';
 export interface Lead {
   id: string;
   name: string;
@@ -100,6 +107,9 @@ export function LMSLeadList({
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedLeads, setSelectedLeads] = useState<Set<string>>(new Set());
   const [showUpload, setShowUpload] = useState(false);
+  const [showFilters, setShowFilters] = useState(false);
+  const [filters, setFilters] = useState<LeadFilters>(EMPTY_FILTERS);
+  const filterCount = countFilters(filters);
   // Cascading product filters: Category → Sub-category → Product
   const [category, setCategory] = useState('');
   const [subcategory, setSubcategory] = useState('');
@@ -107,7 +117,7 @@ export function LMSLeadList({
   const subcatOptions = category ? Object.keys(PRODUCT_TAXONOMY[category] || {}) : [];
   const productOptions =
   category && subcategory ? PRODUCT_TAXONOMY[category]?.[subcategory] || [] : [];
-  const filteredLeads = leads.filter((l) => {
+  const filteredLeads = applyLeadFilters(leads, filters).filter((l) => {
     if (product && l.model !== product) return false;
     if (subcategory && l.subcategory && l.subcategory !== subcategory) return false;
     if (category && l.category && l.category !== category) return false;
@@ -182,16 +192,24 @@ export function LMSLeadList({
                 }} />
               
             </div>
-            <button className="h-[48px] px-5 rounded-full border border-blue-500 bg-white hover:bg-blue-50 flex items-center gap-2 text-sm font-medium text-blue-600 transition-colors">
+            <button
+              onClick={() => setShowFilters(true)}
+              className={`h-[48px] px-5 rounded-full border flex items-center gap-2 text-sm font-medium transition-colors ${filterCount ? 'border-blue-500 bg-blue-500 text-white hover:bg-blue-600' : 'border-blue-500 bg-white hover:bg-blue-50 text-blue-600'}`}>
+
               <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
                 <path
                   d="M2 4h12M4 8h8M6 12h4"
                   stroke="currentColor"
                   strokeWidth="1.5"
                   strokeLinecap="round" />
-                
+
               </svg>
               Filters
+              {filterCount > 0 &&
+              <span className="ml-0.5 inline-flex items-center justify-center min-w-[20px] h-5 px-1 rounded-full bg-white text-blue-600 text-xs font-semibold">
+                  {filterCount}
+                </span>
+              }
             </button>
             <button
               onClick={() => setShowUpload(true)}
@@ -698,6 +716,17 @@ export function LMSLeadList({
       }
 
       {showUpload && <UploadLeadsModal onClose={() => setShowUpload(false)} />}
+
+      {showFilters &&
+      <FiltersModal
+        leads={leads}
+        initial={filters}
+        onApply={(f) => {
+          setFilters(f);
+          setShowFilters(false);
+        }}
+        onClose={() => setShowFilters(false)} />
+      }
     </>);
 
 }
